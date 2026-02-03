@@ -1,0 +1,2401 @@
+<!doctype html>
+<html lang="th" class="h-full">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ระบบบันทึกการจ่ายค่าไม้ RTI</title>
+  <script src="/_sdk/element_sdk.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&amp;display=swap"
+    rel="stylesheet">
+  <style>
+    body {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: #f1f1f1;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 10px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Sarabun', sans-serif;
+    }
+
+    html,
+    body {
+      height: 100%;
+      width: 100%;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+      }
+
+      to {
+        opacity: 1;
+      }
+    }
+
+    @keyframes slideUp {
+      from {
+        transform: translateY(20px);
+        opacity: 0;
+      }
+
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 3px solid rgba(255, 255, 255, .3);
+      border-radius: 50%;
+      border-top-color: #fff;
+      animation: spin 0.6s linear infinite;
+    }
+
+    .glass {
+      background: rgba(255, 255, 255, 0.7);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+
+    .glass-dark {
+      background: rgba(0, 0, 0, 0.2);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .tab-active {
+      background: #667eea !important;
+      color: #ffffff !important;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    }
+
+    .mobile-nav-item.active {
+      color: #667eea;
+    }
+
+    .mobile-nav-item.active i,
+    .mobile-nav-item.active span {
+      color: #667eea;
+      font-weight: 700;
+    }
+
+    @media (max-width: 768px) {
+      .desktop-nav {
+        display: none !important;
+      }
+
+      .mobile-nav {
+        display: flex !important;
+      }
+
+      .app-container {
+        padding: 16px 12px 100px 12px !important;
+      }
+
+      .header-compact {
+        padding: 16px !important;
+      }
+
+      .header-title {
+        font-size: 20px !important;
+      }
+
+      .card-padded {
+        padding: 20px !important;
+      }
+
+      .modal-content {
+        width: 95% !important;
+        padding: 20px !important;
+      }
+    }
+  </style>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+  <style>
+    @view-transition {
+      navigation: auto;
+    }
+
+    .preview-thumbnail:hover {
+      transform: scale(1.05);
+      border-color: #667eea !important;
+    }
+  </style>
+</head>
+
+<body class="h-full w-full overflow-auto" style="background: #f0f4f8;">
+  <div id="app" class="w-full h-full overflow-auto" style="background: #f0f4f8;"><!-- Header -->
+    <div class="w-full sticky top-0 z-50 transition-all header-compact"
+      style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+      <h1 id="app-title" class="text-center font-bold header-title" style="color: #ffffff; font-size: 32px;">
+        ระบบบันทึกการจ่ายค่าไม้ RTI</h1>
+    </div><!-- Tab Navigation (Desktop) -->
+    <div class="w-full desktop-nav"
+      style="background: #ffffff; border-bottom: 2px solid #e5e7eb; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+      <div style="max-width: 1400px; margin: 0 auto; padding: 0 24px;">
+        <div class="flex gap-2">
+          <button id="tab-employee" class="tab-btn px-6 py-4 font-semibold transition-all tab-active"
+            style="font-size: 18px; border-bottom: 3px solid #667eea;"> 📝 <span
+              id="employee-tab-title">บันทึกรายการ</span> </button>
+          <button id="tab-employer" class="tab-btn px-6 py-4 font-semibold transition-all"
+            style="font-size: 18px; background: transparent; color: #6b7280; border-bottom: 3px solid transparent;"> 💼
+            <span id="employer-tab-title">จัดการการจ่ายเงิน</span> </button>
+          <button id="tab-report" class="tab-btn px-6 py-4 font-semibold transition-all"
+            style="font-size: 18px; background: transparent; color: #6b7280; border-bottom: 3px solid transparent;"> 📊
+            สร้างรายงาน </button>
+          <button id="tab-search" class="tab-btn px-6 py-4 font-semibold transition-all"
+            style="font-size: 18px; background: transparent; color: #6b7280; border-bottom: 3px solid transparent;"> 🔍
+            ค้นหารายการ </button>
+        </div>
+      </div>
+    </div><!-- Content -->
+    <div class="app-container" style="max-width: 1400px; margin: 0 auto; padding: 32px 24px;">
+      <!-- Employee Section -->
+      <div id="employee-section">
+        <div class="card-padded"
+          style="background: #ffffff; border-radius: 12px; padding: 32px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-bottom: 24px;">
+          <h2 id="employee-section-title" class="font-bold mb-6"
+            style="color: #1f2937; font-size: 24px; border-left: 4px solid #667eea; padding-left: 16px;">บันทึกรายการ
+          </h2>
+
+          <form id="employee-form">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div><label class="block font-semibold mb-2" style="color: #374151; font-size: 16px;">รหัสอ้างอิง
+                  (สร้างอัตโนมัติ)</label> <input type="text" id="bill-id-auto" readonly
+                  class="w-full px-4 py-3 rounded-lg"
+                  style="background: #f3f4f6; border: 2px solid #e5e7eb; color: #6b7280; font-size: 16px; font-weight: 600;">
+                <small style="color: #6b7280; font-size: 13px;">*ใช้สำหรับค้นหาและอ้างอิง</small>
+              </div>
+              <div><label for="document-number" class="block font-semibold mb-2"
+                  style="color: #374151; font-size: 16px;">เลขที่ในบิล</label> <input type="text" id="document-number"
+                  class="w-full px-4 py-3 rounded-lg transition-all"
+                  style="background: #ffffff; border: 2px solid #d1d5db; font-size: 16px;"
+                  placeholder="เลขที่พิมพ์ในบิลจริง..."> <small
+                  style="color: #6b7280; font-size: 13px;">*เลขที่ปรากฏในเอกสารบิล</small>
+              </div>
+              <div><label for="license-plate" class="block font-semibold mb-2"
+                  style="color: #374151; font-size: 16px;">ทะเบียนรถ <span style="color: #ef4444;">*</span></label>
+                <input type="text" id="license-plate" required class="w-full px-4 py-3 rounded-lg transition-all"
+                  style="background: #ffffff; border: 2px solid #d1d5db; font-size: 16px;" placeholder="เช่น กก-1234">
+              </div>
+              <div><label for="bill-name" class="block font-semibold mb-2"
+                  style="color: #374151; font-size: 16px;">ชื่อบิล <span style="color: #ef4444;">*</span></label> <input
+                  type="text" id="bill-name" required class="w-full px-4 py-3 rounded-lg transition-all"
+                  style="background: #ffffff; border: 2px solid #d1d5db; font-size: 16px;" placeholder="ระบุชื่อบิล">
+              </div>
+              <div><label for="amount" class="block font-semibold mb-2" style="color: #374151; font-size: 16px;">ยอดบิล
+                  (บาท) <span style="color: #ef4444;">*</span></label> <input type="number" id="amount" required min="0"
+                  step="0.01" class="w-full px-4 py-3 rounded-lg transition-all"
+                  style="background: #ffffff; border: 2px solid #d1d5db; font-size: 16px;" placeholder="0.00">
+              </div>
+              <div><label for="wood-weight" class="block font-semibold mb-2"
+                  style="color: #374151; font-size: 16px;">น้ำหนักไม้ (กิโลกรัม)</label> <input type="number"
+                  id="wood-weight" min="0" step="0.01" class="w-full px-4 py-3 rounded-lg transition-all"
+                  style="background: #ffffff; border: 2px solid #d1d5db; font-size: 16px;" placeholder="0.00"> <small
+                  style="color: #6b7280; font-size: 13px;">*ไม่บังคับ - จะแสดงในรูปรายการลูกค้า</small>
+              </div>
+              <div><label for="weigh-fee" class="block font-semibold mb-2"
+                  style="color: #374151; font-size: 16px;">ค่าชั่ง (บาท)</label> <input type="number" id="weigh-fee"
+                  min="0" step="0.01" class="w-full px-4 py-3 rounded-lg transition-all"
+                  style="background: #ffffff; border: 2px solid #d1d5db; font-size: 16px;" placeholder="0.00"> <small
+                  style="color: #6b7280; font-size: 13px;">*ไม่บังคับ - จะแสดงในรูปรายการลูกค้า</small>
+              </div>
+              <div><label for="wood-price-per-kg" class="block font-semibold mb-2"
+                  style="color: #374151; font-size: 16px;">ราคาไม้/กก. (บาท)</label> <input type="number"
+                  id="wood-price-per-kg" min="0" step="0.01" class="w-full px-4 py-3 rounded-lg transition-all"
+                  style="background: #ffffff; border: 2px solid #d1d5db; font-size: 16px;" placeholder="0.00"> <small
+                  style="color: #6b7280; font-size: 13px;">*ไม่บังคับ - จะแสดงในรูปรายการลูกค้า</small>
+              </div>
+              <div><label for="bank-account" class="block font-semibold mb-2"
+                  style="color: #374151; font-size: 16px;">เลขบัญชีผู้รับ <span style="color: #ef4444;">*</span></label>
+                <input type="text" id="bank-account" required list="bank-account-history"
+                  class="w-full px-4 py-3 rounded-lg transition-all"
+                  style="background: #ffffff; border: 2px solid #d1d5db; font-size: 16px;"
+                  placeholder="เลขบัญชี 10-13 หลัก"> <datalist id="bank-account-history"></datalist> <small
+                  style="color: #6b7280; font-size: 13px;">*พิมพ์เลขบัญชีที่เคยใช้ ข้อมูลจะขึ้นอัตโนมัติ</small>
+              </div>
+              <div><label for="account-holder" class="block font-semibold mb-2"
+                  style="color: #374151; font-size: 16px;">ชื่อเจ้าของบัญชี <span
+                    style="color: #ef4444;">*</span></label> <input type="text" id="account-holder" required
+                  list="account-holder-history" class="w-full px-4 py-3 rounded-lg transition-all"
+                  style="background: #ffffff; border: 2px solid #d1d5db; font-size: 16px;"
+                  placeholder="ชื่อ-นามสกุล เจ้าของบัญชี"> <datalist id="account-holder-history"></datalist> <small
+                  style="color: #6b7280; font-size: 13px;">*พิมพ์ชื่อที่เคยใช้ ข้อมูลจะขึ้นอัตโนมัติ</small>
+              </div>
+              <div><label for="bank-name" class="block font-semibold mb-2"
+                  style="color: #374151; font-size: 16px;">ชื่อธนาคาร <span style="color: #ef4444;">*</span></label>
+                <input type="text" id="bank-name" required class="w-full px-4 py-3 rounded-lg transition-all"
+                  style="background: #ffffff; border: 2px solid #d1d5db; font-size: 16px;"
+                  placeholder="เช่น ธนาคารกสิกรไทย">
+              </div>
+              <div class="md:col-span-2"><label for="note" class="block font-semibold mb-2"
+                  style="color: #374151; font-size: 16px;">หมายเหตุ</label> <textarea id="note" rows="3"
+                  class="w-full px-4 py-3 rounded-lg transition-all"
+                  style="background: #ffffff; border: 2px solid #d1d5db; font-size: 16px; resize: vertical;"
+                  placeholder="ระบุหมายเหตุ (ถ้ามี)"></textarea>
+              </div>
+            </div>
+            <div class="mt-8 flex gap-4"><button type="submit" id="submit-btn"
+                class="flex-1 px-8 py-4 rounded-lg font-bold text-lg transition-all"
+                style="background: #667eea; color: #ffffff; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);"> 💾
+                บันทึกรายการ </button> <button type="button" id="reset-btn"
+                class="px-8 py-4 rounded-lg font-semibold text-lg transition-all"
+                style="background: #f3f4f6; color: #6b7280;"> 🔄 ล้างข้อมูล </button>
+            </div>
+          </form>
+          <div id="employee-message" class="mt-6 hidden"></div>
+        </div><!-- Recent Records List -->
+        <div style="background: #ffffff; border-radius: 12px; padding: 32px; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
+          <h3 class="font-bold mb-4"
+            style="color: #1f2937; font-size: 20px; border-left: 4px solid #10b981; padding-left: 16px;">📋 รายการล่าสุด
+          </h3>
+          <div id="recent-items" class="space-y-4"></div>
+        </div>
+      </div><!-- Employer Section -->
+      <div id="employer-section" class="hidden"><!-- Summary Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6"><!-- Total Pending Card -->
+          <div
+            style="background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); border-radius: 12px; padding: 24px; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);">
+            <div style="color: #ffffff; font-size: 16px; margin-bottom: 8px; opacity: 0.9;">
+              ⏳ ยอดค้างจ่ายทั้งหมด
+            </div>
+            <div id="total-pending-amount" class="font-bold" style="color: #ffffff; font-size: 36px;">
+              0.00 บาท
+            </div>
+            <div id="total-pending-count" style="color: #ffffff; font-size: 14px; margin-top: 4px; opacity: 0.9;">
+              0 รายการ
+            </div>
+          </div><!-- Today's Summary Card -->
+          <div
+            style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 12px; padding: 24px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);">
+            <div style="color: #ffffff; font-size: 16px; margin-bottom: 8px; opacity: 0.9;">
+              📅 สรุปยอดวันนี้
+            </div>
+            <div id="today-total-amount" class="font-bold" style="color: #ffffff; font-size: 36px;">
+              0.00 บาท
+            </div>
+            <div id="today-count" style="color: #ffffff; font-size: 14px; margin-top: 4px; opacity: 0.9;">
+              0 รายการ
+            </div>
+          </div>
+        </div><!-- Search -->
+        <div
+          style="background: #ffffff; border-radius: 12px; padding: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-bottom: 24px;">
+          <input type="text" id="employer-search" class="w-full px-4 py-3 rounded-lg"
+            style="background: #ffffff; border: 2px solid #d1d5db; font-size: 16px;"
+            placeholder="🔍 กรองรายการด้วยเลขที่บิล, ทะเบียนรถ หรือชื่อบิล...">
+        </div><!-- Sub-tabs -->
+        <div class="flex gap-4 mb-6"><button id="subtab-pending"
+            class="px-6 py-3 rounded-lg font-semibold text-lg transition-all"
+            style="background: #667eea; color: #ffffff;"> ⏳ รอจ่ายเงิน </button> <button id="subtab-paid"
+            class="px-6 py-3 rounded-lg font-semibold text-lg transition-all"
+            style="background: #f3f4f6; color: #6b7280;"> ✅ จ่ายแล้ว </button>
+        </div><!-- Pending List -->
+        <div id="pending-list">
+          <h3 class="font-bold mb-4" style="color: #1f2937; font-size: 20px;">📋 รายการรอจ่ายเงิน</h3>
+          <div id="pending-items" class="space-y-4"></div>
+        </div><!-- Paid List -->
+        <div id="paid-list" class="hidden">
+          <h3 class="font-bold mb-4" style="color: #1f2937; font-size: 20px;">✅ รายการจ่ายแล้ว</h3>
+          <div id="paid-items" class="space-y-4"></div>
+        </div>
+      </div><!-- Report Section -->
+      <div id="report-section" class="hidden">
+        <div
+          style="background: #ffffff; border-radius: 12px; padding: 32px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-bottom: 24px;">
+          <h2 class="font-bold mb-6"
+            style="color: #1f2937; font-size: 24px; border-left: 4px solid #667eea; padding-left: 16px;">📊 สร้างรายงาน
+            PDF</h2>
+          <div class="flex flex-col md:flex-row gap-4 items-end">
+            <div class="flex-1"><label for="export-month" class="block font-semibold mb-2"
+                style="color: #374151; font-size: 16px;">เลือกเดือน</label> <input type="month" id="export-month"
+                class="w-full px-4 py-3 rounded-lg"
+                style="background: #ffffff; border: 2px solid #d1d5db; font-size: 16px;">
+            </div><button id="export-pdf-btn"
+              class="px-8 py-3 rounded-lg font-semibold text-lg transition-all whitespace-nowrap"
+              style="background: #ef4444; color: #ffffff; box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);"> 📥
+              สร้างและบันทึก PDF </button>
+          </div>
+          <div id="export-message" class="mt-4 hidden"></div>
+        </div>
+      </div><!-- Search Section -->
+      <div id="search-section" class="hidden"><!-- Search by Bill ID -->
+        <div
+          style="background: #ffffff; border-radius: 12px; padding: 32px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-bottom: 24px;">
+          <h2 class="font-bold mb-6"
+            style="color: #1f2937; font-size: 24px; border-left: 4px solid #667eea; padding-left: 16px;">🔍
+            ค้นหาด้วยเลขที่บิล</h2>
+          <div class="flex gap-4 mb-6"><input type="text" id="search-bill-id" class="flex-1 px-4 py-3 rounded-lg"
+              style="background: #ffffff; border: 2px solid #d1d5db; font-size: 16px;"
+              placeholder="ใส่เลขที่บิล เช่น R0001"> <button id="search-btn"
+              class="px-8 py-3 rounded-lg font-semibold text-lg transition-all"
+              style="background: #667eea; color: #ffffff;"> ค้นหา </button>
+          </div>
+          <div id="search-result" class="hidden"></div>
+        </div><!-- Search by Bill Name -->
+        <div style="background: #ffffff; border-radius: 12px; padding: 32px; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
+          <h2 class="font-bold mb-6"
+            style="color: #1f2937; font-size: 24px; border-left: 4px solid #667eea; padding-left: 16px;">📄
+            ค้นหาด้วยชื่อบิล</h2>
+          <div class="flex gap-4 mb-6"><input type="text" id="search-bill-name" list="bill-name-list"
+              class="flex-1 px-4 py-3 rounded-lg"
+              style="background: #ffffff; border: 2px solid #d1d5db; font-size: 16px;" placeholder="ใส่ชื่อบิล">
+            <datalist id="bill-name-list"></datalist> <button id="search-bill-name-btn"
+              class="px-8 py-3 rounded-lg font-semibold text-lg transition-all"
+              style="background: #667eea; color: #ffffff;"> ค้นหา </button>
+          </div>
+          <div id="search-bill-name-result" class="hidden"></div>
+        </div>
+      </div>
+    </div><!-- Edit Modal -->
+    <div id="edit-modal" class="hidden fixed inset-0 flex items-center justify-center"
+      style="background: rgba(0,0,0,0.5); z-index: 1000; overflow-y: auto; padding: 20px;">
+      <div
+        style="background: #ffffff; border-radius: 12px; padding: 32px; max-width: 800px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.3); max-height: 90%; overflow-y: auto;">
+        <h3 class="font-bold mb-6" style="color: #1f2937; font-size: 24px;">✏️ แก้ไขข้อมูลรายการ</h3>
+        <form id="edit-form">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div><label class="block font-semibold mb-2" style="color: #374151; font-size: 16px;">รหัสอ้างอิง</label>
+              <input type="text" id="edit-bill-id" readonly class="w-full px-4 py-3 rounded-lg"
+                style="background: #f3f4f6; border: 2px solid #e5e7eb; color: #6b7280; font-size: 16px; font-weight: 600;">
+            </div>
+            <div><label for="edit-document-number" class="block font-semibold mb-2"
+                style="color: #374151; font-size: 16px;">เลขที่ในบิล</label> <input type="text"
+                id="edit-document-number" class="w-full px-4 py-3 rounded-lg transition-all"
+                style="background: #ffffff; border: 2px solid #d1d5db; font-size: 16px;"
+                placeholder="เลขที่พิมพ์ในบิลจริง...">
+            </div>
+            <div><label for="edit-license-plate" class="block font-semibold mb-2"
+                style="color: #374151; font-size: 16px;">ทะเบียนรถ <span style="color: #ef4444;">*</span></label> <input
+                type="text" id="edit-license-plate" required class="w-full px-4 py-3 rounded-lg transition-all"
+                style="background: #ffffff; border: 2px solid #d1d5db; font-size: 16px;" placeholder="เช่น กก-1234">
+            </div>
+            <div><label for="edit-bill-name" class="block font-semibold mb-2"
+                style="color: #374151; font-size: 16px;">ชื่อบิล <span style="color: #ef4444;">*</span></label> <input
+                type="text" id="edit-bill-name" required class="w-full px-4 py-3 rounded-lg transition-all"
+                style="background: #ffffff; border: 2px solid #d1d5db; font-size: 16px;" placeholder="ระบุชื่อบิล">
+            </div>
+            <div><label for="edit-amount" class="block font-semibold mb-2"
+                style="color: #374151; font-size: 16px;">ยอดบิล (บาท) <span style="color: #ef4444;">*</span></label>
+              <input type="number" id="edit-amount" required min="0" step="0.01"
+                class="w-full px-4 py-3 rounded-lg transition-all"
+                style="background: #ffffff; border: 2px solid #d1d5db; font-size: 16px;" placeholder="0.00">
+            </div>
+            <div><label for="edit-wood-weight" class="block font-semibold mb-2"
+                style="color: #374151; font-size: 16px;">น้ำหนักไม้ (กิโลกรัม)</label> <input type="number"
+                id="edit-wood-weight" min="0" step="0.01" class="w-full px-4 py-3 rounded-lg transition-all"
+                style="background: #ffffff; border: 2px solid #d1d5db; font-size: 16px;" placeholder="0.00">
+            </div>
+            <div><label for="edit-weigh-fee" class="block font-semibold mb-2"
+                style="color: #374151; font-size: 16px;">ค่าชั่ง (บาท)</label> <input type="number" id="edit-weigh-fee"
+                min="0" step="0.01" class="w-full px-4 py-3 rounded-lg transition-all"
+                style="background: #ffffff; border: 2px solid #d1d5db; font-size: 16px;" placeholder="0.00">
+            </div>
+            <div><label for="edit-wood-price-per-kg" class="block font-semibold mb-2"
+                style="color: #374151; font-size: 16px;">ราคาไม้/กก. (บาท)</label> <input type="number"
+                id="edit-wood-price-per-kg" min="0" step="0.01" class="w-full px-4 py-3 rounded-lg transition-all"
+                style="background: #ffffff; border: 2px solid #d1d5db; font-size: 16px;" placeholder="0.00">
+            </div>
+            <div><label for="edit-bank-account" class="block font-semibold mb-2"
+                style="color: #374151; font-size: 16px;">เลขบัญชีผู้รับ <span style="color: #ef4444;">*</span></label>
+              <input type="text" id="edit-bank-account" required class="w-full px-4 py-3 rounded-lg transition-all"
+                style="background: #ffffff; border: 2px solid #d1d5db; font-size: 16px;"
+                placeholder="เลขบัญชี 10-13 หลัก">
+            </div>
+            <div><label for="edit-account-holder" class="block font-semibold mb-2"
+                style="color: #374151; font-size: 16px;">ชื่อเจ้าของบัญชี <span style="color: #ef4444;">*</span></label>
+              <input type="text" id="edit-account-holder" required class="w-full px-4 py-3 rounded-lg transition-all"
+                style="background: #ffffff; border: 2px solid #d1d5db; font-size: 16px;"
+                placeholder="ชื่อ-นามสกุล เจ้าของบัญชี">
+            </div>
+            <div><label for="edit-bank-name" class="block font-semibold mb-2"
+                style="color: #374151; font-size: 16px;">ชื่อธนาคาร <span style="color: #ef4444;">*</span></label>
+              <input type="text" id="edit-bank-name" required class="w-full px-4 py-3 rounded-lg transition-all"
+                style="background: #ffffff; border: 2px solid #d1d5db; font-size: 16px;"
+                placeholder="เช่น ธนาคารกสิกรไทย">
+            </div>
+            <div class="md:col-span-2"><label for="edit-note" class="block font-semibold mb-2"
+                style="color: #374151; font-size: 16px;">หมายเหตุ</label> <textarea id="edit-note" rows="3"
+                class="w-full px-4 py-3 rounded-lg transition-all"
+                style="background: #ffffff; border: 2px solid #d1d5db; font-size: 16px; resize: vertical;"
+                placeholder="ระบุหมายเหตุ (ถ้ามี)"></textarea>
+            </div>
+          </div>
+          <div class="flex gap-4 mt-8"><button type="submit" id="edit-save-btn"
+              class="flex-1 px-8 py-4 rounded-lg font-bold text-lg transition-all"
+              style="background: #10b981; color: #ffffff; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);"> 💾
+              บันทึกการแก้ไข </button> <button type="button" id="edit-cancel-btn"
+              class="px-8 py-4 rounded-lg font-semibold text-lg transition-all"
+              style="background: #f3f4f6; color: #6b7280;"> ❌ ยกเลิก </button>
+          </div>
+          <div id="edit-message" class="mt-4 hidden"></div>
+        </form>
+      </div>
+    </div><!-- Upload Modal -->
+    <div id="upload-modal" class="hidden fixed inset-0 flex items-center justify-center"
+      style="background: rgba(0,0,0,0.5); z-index: 1000;">
+      <div
+        style="background: #ffffff; border-radius: 12px; padding: 32px; max-width: 500px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.3);">
+        <h3 class="font-bold mb-4" style="color: #1f2937; font-size: 20px;">📤 อัปโหลดสลิปการโอนเงิน</h3>
+        <p id="modal-bill-info" class="mb-4" style="color: #6b7280; font-size: 16px;"></p><input type="file"
+          id="slip-file" accept="image/*" class="w-full mb-4 px-4 py-3 rounded-lg"
+          style="background: #f3f4f6; border: 2px solid #d1d5db; font-size: 16px;">
+        <div class="flex gap-4"><button id="upload-confirm-btn"
+            class="flex-1 px-6 py-3 rounded-lg font-semibold text-lg transition-all"
+            style="background: #10b981; color: #ffffff;"> ✅ อัปโหลด </button> <button id="upload-cancel-btn"
+            class="px-6 py-3 rounded-lg font-semibold text-lg transition-all"
+            style="background: #f3f4f6; color: #6b7280;"> ❌ ยกเลิก </button>
+        </div>
+        <div id="upload-progress" class="hidden mt-4"></div>
+      </div>
+    </div><!-- Image Viewer Modal -->
+    <div id="image-viewer-modal" class="hidden fixed inset-0 flex items-center justify-center"
+      style="background: rgba(0,0,0,0.85); z-index: 1001; padding: 20px;">
+      <div style="max-width: 90%; max-height: 90%; position: relative;"><button id="close-image-viewer"
+          style="position: absolute; top: -40px; right: 0; background: #ef4444; color: #ffffff; width: 40px; height: 40px; border-radius: 50%; font-size: 24px; font-weight: bold; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+          × </button> <img id="viewer-image" src="" alt="สลิปการโอนเงิน"
+          style="max-width: 100%; max-height: 80%; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.5); object-fit: contain; background: #ffffff;">
+        <div id="viewer-info" class="mt-4 text-center"
+          style="color: #ffffff; font-size: 16px; font-weight: 600; text-shadow: 0 2px 4px rgba(0,0,0,0.5);"></div>
+        <div class="mt-4 text-center"><a id="viewer-drive-link" href="" target="_blank" rel="noopener noreferrer"
+            class="inline-block px-6 py-3 rounded-lg font-semibold transition-all"
+            style="background: #3b82f6; color: #ffffff; text-decoration: none;"> 🔗 เปิดใน Google Drive </a>
+        </div>
+      </div>
+    </div><!-- Mobile Navigation Bar -->
+    <div
+      class="mobile-nav fixed bottom-0 left-0 right-0 h-20 bg-white border-t border-gray-200 hidden items-center justify-around z-50 px-2 glass shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
+      <button data-tab="employee"
+        class="mobile-nav-item active flex flex-col items-center justify-center flex-1 h-full gap-1 transition-all">
+        <span class="text-2xl">📝</span>
+        <span class="text-[10px] font-bold">บันทึก</span>
+      </button>
+      <button data-tab="employer"
+        class="mobile-nav-item flex flex-col items-center justify-center flex-1 h-full gap-1 transition-all">
+        <span class="text-2xl">💼</span>
+        <span class="text-[10px] font-bold">จัดการ</span>
+      </button>
+      <button data-tab="report"
+        class="mobile-nav-item flex flex-col items-center justify-center flex-1 h-full gap-1 transition-all">
+        <span class="text-2xl">📊</span>
+        <span class="text-[10px] font-bold">รายงาน</span>
+      </button>
+      <button data-tab="search"
+        class="mobile-nav-item flex flex-col items-center justify-center flex-1 h-full gap-1 transition-all">
+        <span class="text-2xl">🔍</span>
+        <span class="text-[10px] font-bold">ค้นหา</span>
+      </button>
+    </div><!-- Toast Notification Container -->
+
+    <div id="toast-container"
+      style="position: fixed; top: 20px; right: 20px; z-index: 1100; display: flex; flex-direction: column; gap: 12px;">
+    </div>
+  </div>
+  <script>
+    const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzEa4ysie0yf2pXM7RTqA13bRu3ZaIrEJ9jl0jhiE8DnHz5rQZZDIa0LR2QVnKz01BKzQ/exec';
+    const RECEIPT_FOLDER_ID = '1xqrEk9SksSRaHZUEIsni0zyDg4i_LShg';
+
+    const defaultConfig = {
+      app_title: 'ระบบบันทึกการจ่ายค่าไม้ RTI',
+      employee_tab_name: 'บันทึกรายการ',
+      employer_tab_name: 'จัดการการจ่ายเงิน'
+    };
+
+    let allRecords = [];
+    let currentUploadRecord = null;
+    let currentEditRecord = null;
+    let bankAccountMap = new Map();
+    let holderToAccountMap = new Map();
+    let sdkInitialized = false;
+
+    // ระบบจัดการแท็บ (รองรับทั้ง Desktop และ Mobile)
+    function initializeTabs() {
+      const tabs = {
+        employee: document.getElementById('employee-section'),
+        employer: document.getElementById('employer-section'),
+        report: document.getElementById('report-section'),
+        search: document.getElementById('search-section')
+      };
+
+      const desktopBtns = {
+        employee: document.getElementById('tab-employee'),
+        employer: document.getElementById('tab-employer'),
+        report: document.getElementById('tab-report'),
+        search: document.getElementById('tab-search')
+      };
+
+      const mobileBtns = document.querySelectorAll('.mobile-nav-item');
+
+      function switchTab(tabId) {
+        // Hide all sections
+        Object.values(tabs).forEach(section => section.classList.add('hidden'));
+        // Show target section
+        tabs[tabId].classList.remove('hidden');
+
+        // Update Desktop buttons
+        Object.entries(desktopBtns).forEach(([id, btn]) => {
+          if (id === tabId) {
+            btn.classList.add('tab-active');
+            btn.style.background = '#667eea';
+            btn.style.color = '#ffffff';
+            btn.style.borderBottomColor = '#667eea';
+          } else {
+            btn.classList.remove('tab-active');
+            btn.style.background = 'transparent';
+            btn.style.color = '#6b7280';
+            btn.style.borderBottomColor = 'transparent';
+          }
+        });
+
+        // Update Mobile buttons
+        mobileBtns.forEach(btn => {
+          if (btn.getAttribute('data-tab') === tabId) {
+            btn.classList.add('active');
+          } else {
+            btn.classList.remove('active');
+          }
+        });
+
+        // Refresh data if switching to Employer section
+        if (tabId === 'employer') {
+          renderEmployerLists();
+        }
+
+        // Scroll to top
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+
+
+      // Add desktop listeners
+      Object.entries(desktopBtns).forEach(([id, btn]) => {
+        btn.addEventListener('click', () => switchTab(id));
+      });
+
+      // Add mobile listeners
+      mobileBtns.forEach(btn => {
+        btn.addEventListener('click', () => switchTab(btn.getAttribute('data-tab')));
+      });
+
+      // Export switchTab to global for other functions to use
+      window.appSwitchTab = switchTab;
+    }
+
+    // Call initialize immediately
+    document.addEventListener('DOMContentLoaded', initializeTabs);
+
+
+    // ระบบจัดการข้อมูลผ่าน Apps Script แทน dataSdk
+    async function loadAllRecords() {
+      try {
+        const response = await fetch(APPS_SCRIPT_URL + (APPS_SCRIPT_URL.includes('?') ? '&' : '?') + 't=' + Date.now());
+        const data = await response.json();
+        allRecords = Array.isArray(data) ? data : [];
+
+        updateBankHistory();
+        updateBillNameList();
+        renderRecentItems();
+        renderEmployerLists();
+
+        return { isOk: true };
+      } catch (error) {
+        console.error('Fetch error:', error);
+        return { isOk: false, error: error };
+      }
+    }
+
+    const dataService = {
+      async create(record) {
+        try {
+          const response = await fetch(APPS_SCRIPT_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+              action: 'create',
+              data: JSON.stringify(record)
+            })
+          });
+          const result = await response.json();
+          if (result.success) await loadAllRecords();
+          return { isOk: result.success, error: result.success ? null : { message: result.message } };
+        } catch (error) {
+          return { isOk: false, error: error };
+        }
+      },
+      async update(record) {
+        try {
+          const response = await fetch(APPS_SCRIPT_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+              action: 'update',
+              data: JSON.stringify(record)
+            })
+          });
+          const result = await response.json();
+          if (result.success) await loadAllRecords();
+          return { isOk: result.success, error: result.success ? null : { message: result.message } };
+        } catch (error) {
+          return { isOk: false, error: error };
+        }
+      },
+      async delete(record) {
+        try {
+          const response = await fetch(APPS_SCRIPT_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+              action: 'delete',
+              data: JSON.stringify({ bill_id: record.bill_id })
+            })
+          });
+          const result = await response.json();
+          if (result.success) await loadAllRecords();
+          return { isOk: result.success, error: result.success ? null : { message: result.message } };
+        } catch (error) {
+          return { isOk: false, error: error };
+        }
+      }
+    };
+
+    function generateBillId() {
+      const numbers = String(Math.floor(Math.random() * 10000)).padStart(4, '0');
+      return 'R' + numbers;
+    }
+
+    async function onConfigChange(config) {
+      const appTitle = config.app_title || defaultConfig.app_title;
+      const employeeTabName = config.employee_tab_name || defaultConfig.employee_tab_name;
+      const employerTabName = config.employer_tab_name || defaultConfig.employer_tab_name;
+
+      document.getElementById('app-title').textContent = appTitle;
+      document.getElementById('employee-tab-title').textContent = employeeTabName;
+      document.getElementById('employer-tab-title').textContent = employerTabName;
+      document.getElementById('employee-section-title').textContent = employeeTabName;
+    }
+
+    const dataHandler = {
+      onDataChanged(data) {
+        allRecords = data;
+        updateBankHistory();
+        updateBillNameList();
+        renderRecentItems();
+        renderEmployerLists();
+      }
+    };
+
+    function updateBankHistory() {
+      bankAccountMap.clear();
+      holderToAccountMap.clear();
+
+      const accountList = document.getElementById('bank-account-history');
+      const holderList = document.getElementById('account-holder-history');
+      accountList.innerHTML = '';
+      holderList.innerHTML = '';
+
+      // เรียงลำดับจากใหม่ไปเก่า เพื่อเอาข้อมูลล่าสุดมาใช้เป็นหลัก
+      // เรียงลำดับจากใหม่ไปเก่า โดยใช้ created_at เป็นหลักและมี fallback
+      const sortedRecords = [...allRecords].sort((a, b) => {
+        const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+        const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+        if (dateA !== dateB) return dateB - dateA;
+        // ถ้าเวลาเท่ากัน ให้เรียงตามตำแหน่งใน array (ถ้ามี) หรือ id
+        return 0;
+      });
+
+      sortedRecords.forEach(record => {
+        if (record.bank_account && record.bank_name && record.account_holder) {
+          // เก็บเฉพาะข้อมูลล่าสุดของเลขบัญชีนั้นๆ
+          if (!bankAccountMap.has(record.bank_account)) {
+            bankAccountMap.set(record.bank_account, {
+              bank_name: record.bank_name,
+              account_holder: record.account_holder
+            });
+          }
+
+          if (!holderToAccountMap.has(record.account_holder)) {
+            holderToAccountMap.set(record.account_holder, [{
+              bank_account: record.bank_account,
+              bank_name: record.bank_name
+            }]);
+          }
+        }
+      });
+
+      bankAccountMap.forEach((data, account) => {
+        const option = document.createElement('option');
+        option.value = account;
+        option.textContent = `${account} - ${data.account_holder} (${data.bank_name})`;
+        accountList.appendChild(option);
+      });
+
+      holderToAccountMap.forEach((accounts, holder) => {
+        accounts.forEach(acc => {
+          const option = document.createElement('option');
+          option.value = holder;
+          option.setAttribute('data-account', acc.bank_account);
+          option.setAttribute('data-bank', acc.bank_name);
+          option.textContent = `${holder} - ${acc.bank_account} (${acc.bank_name})`;
+          holderList.appendChild(option);
+        });
+      });
+    }
+
+    function updateBillNameList() {
+      const billNameSet = new Set();
+      allRecords.forEach(record => {
+        if (record.bill_name) {
+          billNameSet.add(record.bill_name);
+        }
+      });
+
+      const datalist = document.getElementById('bill-name-list');
+      datalist.innerHTML = '';
+
+      billNameSet.forEach(name => {
+        const option = document.createElement('option');
+        option.value = name;
+        datalist.appendChild(option);
+      });
+    }
+
+    function renderRecentItems() {
+      const recentContainer = document.getElementById('recent-items');
+
+      const sortedRecords = [...allRecords].sort((a, b) => {
+        const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+        const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+        return dateB - dateA;
+      });
+
+      const recentRecords = sortedRecords.slice(0, 10);
+
+      recentContainer.innerHTML = recentRecords.length === 0
+        ? '<div style="background: #f3f4f6; padding: 20px; border-radius: 8px; text-align: center; color: #6b7280; font-size: 16px;">ยังไม่มีรายการ</div>'
+        : '';
+
+      recentRecords.forEach(record => {
+        const card = createCompactRecordCard(record);
+        recentContainer.appendChild(card);
+      });
+    }
+
+    function getDirectImageUrl(url) {
+      if (!url) return '';
+      // If it's already a data URL or direct link, return as is
+      if (url.startsWith('data:') || !url.includes('drive.google.com')) return url;
+
+      // Extract file ID from Google Drive URL
+      const match = url.match(/[-\w]{25,}/);
+      if (match && match[0]) {
+        return `https://lh3.googleusercontent.com/d/${match[0]}`;
+      }
+      return url;
+    }
+
+    function createCompactRecordCard(record) {
+      const card = document.createElement('div');
+      card.style.cssText = 'background: #ffffff; border-radius: 8px; padding: 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border-left: 4px solid ' + (record.status === 'จ่ายแล้ว' ? '#10b981' : '#f59e0b');
+
+      const amount = parseFloat(record.amount || 0);
+      const formattedAmount = amount.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+      card.innerHTML = `
+        <div class="flex justify-between items-start">
+          <div class="flex-1">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="font-bold" style="color: #1f2937; font-size: 16px;">📋 ${record.bill_id}</span>
+              <span class="px-3 py-1 rounded-full text-xs font-semibold" style="background: ${record.status === 'จ่ายแล้ว' ? '#d1fae5' : '#fef3c7'}; color: ${record.status === 'จ่ายแล้ว' ? '#065f46' : '#92400e'};">
+                ${record.status}
+              </span>
+            </div>
+            <div style="color: #6b7280; font-size: 14px; margin-bottom: 4px;">
+              ${record.bill_name} | ${record.license_plate}
+            </div>
+            <div class="font-bold" style="color: #667eea; font-size: 16px;">
+              ${formattedAmount} บาท
+            </div>
+          </div>
+          <div style="color: #9ca3af; font-size: 12px; text-align: right;">
+            ${record.created_at ? new Date(record.created_at).toLocaleString('th-TH', {
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      }) : '-'}
+          </div>
+        </div>
+        ${(record.slip_url || record.receipt_url) ? `
+          <div class="flex gap-2 mt-3 overflow-x-auto pb-1">
+            ${record.slip_url ? `
+              <img src="${getDirectImageUrl(record.slip_url)}" class="preview-thumbnail" 
+                onclick="event.stopPropagation(); openImageViewer('${record.slip_url}', 'สลิป: ${record.bill_id}')"
+                style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px; border: 1px solid #e5e7eb;">
+            ` : ''}
+            ${record.receipt_url ? `
+              <img src="${getDirectImageUrl(record.receipt_url)}" class="preview-thumbnail" 
+                onclick="event.stopPropagation(); openImageViewer('${record.receipt_url}', 'รูปรายการ: ${record.bill_id}')"
+                style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px; border: 1px solid #e5e7eb;">
+            ` : ''}
+          </div>
+        ` : ''}
+      `;
+
+      card.style.cursor = 'pointer';
+      card.addEventListener('click', () => {
+        if (window.appSwitchTab) {
+          window.appSwitchTab('employer');
+        } else {
+          document.getElementById('tab-employer').click();
+        }
+        setTimeout(() => {
+          if (record.status === 'รอจ่าย') {
+            document.getElementById('subtab-pending').click();
+          } else {
+            document.getElementById('subtab-paid').click();
+          }
+        }, 100);
+      });
+
+
+      return card;
+    }
+
+    function updateSummary() {
+      const pendingRecords = allRecords.filter(r => r.status === 'รอจ่าย');
+      const totalPending = pendingRecords.reduce((sum, r) => sum + parseFloat(r.amount || 0), 0);
+      document.getElementById('total-pending-amount').textContent = totalPending.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' บาท';
+      document.getElementById('total-pending-count').textContent = pendingRecords.length + ' รายการ';
+
+      const today = new Date();
+      const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      const todayRecords = allRecords.filter(r => {
+        const recordDate = new Date(r.created_at);
+        return recordDate >= todayStart;
+      });
+      const todayTotal = todayRecords.reduce((sum, r) => sum + parseFloat(r.amount || 0), 0);
+      document.getElementById('today-total-amount').textContent = todayTotal.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' บาท';
+      document.getElementById('today-count').textContent = todayRecords.length + ' รายการ';
+    }
+
+    function renderEmployerLists() {
+      updateSummary();
+
+      const searchTerm = document.getElementById('employer-search').value.toLowerCase();
+
+      const pendingRecords = allRecords.filter(r =>
+        r.status === 'รอจ่าย' &&
+        (r.bill_id.toLowerCase().includes(searchTerm) ||
+          (r.document_number && r.document_number.toLowerCase().includes(searchTerm)) ||
+          r.license_plate.toLowerCase().includes(searchTerm) ||
+          r.bill_name.toLowerCase().includes(searchTerm))
+      ).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+      const paidRecords = allRecords.filter(r =>
+        r.status === 'จ่ายแล้ว' &&
+        (r.bill_id.toLowerCase().includes(searchTerm) ||
+          (r.document_number && r.document_number.toLowerCase().includes(searchTerm)) ||
+          r.license_plate.toLowerCase().includes(searchTerm) ||
+          r.bill_name.toLowerCase().includes(searchTerm))
+      ).sort((a, b) => new Date(b.paid_at || b.created_at) - new Date(a.paid_at || a.created_at));
+
+      const pendingContainer = document.getElementById('pending-items');
+      const paidContainer = document.getElementById('paid-items');
+
+      pendingContainer.innerHTML = pendingRecords.length === 0
+        ? '<div style="background: #fef3c7; padding: 20px; border-radius: 8px; text-align: center; color: #92400e; font-size: 16px;">ไม่มีรายการรอจ่ายเงิน</div>'
+        : '';
+
+      paidContainer.innerHTML = paidRecords.length === 0
+        ? '<div style="background: #d1fae5; padding: 20px; border-radius: 8px; text-align: center; color: #065f46; font-size: 16px;">ไม่มีรายการจ่ายแล้ว</div>'
+        : '';
+
+      pendingRecords.forEach(record => {
+        const card = createRecordCard(record, false);
+        pendingContainer.appendChild(card);
+      });
+
+      paidRecords.forEach(record => {
+        const card = createRecordCard(record, true);
+        paidContainer.appendChild(card);
+      });
+    }
+
+    function createRecordCard(record, isPaid) {
+      const card = document.createElement('div');
+      card.style.cssText = 'background: #ffffff; border-radius: 12px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); border-left: 4px solid ' + (isPaid ? '#10b981' : '#f59e0b');
+
+      const amount = parseFloat(record.amount || 0);
+      const formattedAmount = amount.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+      const woodWeight = record.wood_weight ? parseFloat(record.wood_weight) : null;
+      const formattedWeight = woodWeight ? woodWeight.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : null;
+
+      const slipImageUrl = getDirectImageUrl(record.slip_url);
+      const receiptImageUrl = getDirectImageUrl(record.receipt_url);
+
+      card.innerHTML = `
+        <div class="flex justify-between items-start mb-4">
+          <div>
+            <div class="font-bold" style="color: #1f2937; font-size: 18px; margin-bottom: 4px;">📋 ${record.bill_id}</div>
+            <div style="color: #6b7280; font-size: 14px;">${new Date(record.created_at).toLocaleString('th-TH')}</div>
+          </div>
+          <div class="px-4 py-2 rounded-full font-semibold" style="background: ${isPaid ? '#d1fae5' : '#fef3c7'}; color: ${isPaid ? '#065f46' : '#92400e'}; font-size: 14px;">
+            ${record.status}
+          </div>
+        </div>
+        
+        <div class="grid grid-cols-2 gap-4 mb-4">
+          ${record.document_number ? `
+          <div class="col-span-2">
+            <div style="color: #6b7280; font-size: 14px; margin-bottom: 4px;">📑 เลขที่ในบิล</div>
+            <div class="font-semibold" style="color: #1f2937; font-size: 16px;">${record.document_number}</div>
+          </div>
+          ` : ''}
+          <div>
+            <div style="color: #6b7280; font-size: 14px; margin-bottom: 4px;">🚗 ทะเบียนรถ</div>
+            <div class="font-semibold" style="color: #1f2937; font-size: 16px;">${record.license_plate}</div>
+          </div>
+          <div>
+            <div style="color: #6b7280; font-size: 14px; margin-bottom: 4px;">📄 ชื่อบิล</div>
+            <div class="font-semibold" style="color: #1f2937; font-size: 16px;">${record.bill_name}</div>
+          </div>
+          <div>
+            <div style="color: #6b7280; font-size: 14px; margin-bottom: 4px;">💰 ยอดเงิน</div>
+            <div class="font-bold" style="color: #667eea; font-size: 18px;">${formattedAmount} บาท</div>
+          </div>
+          ${formattedWeight ? `
+          <div>
+            <div style="color: #6b7280; font-size: 14px; margin-bottom: 4px;">⚖️ น้ำหนักไม้</div>
+            <div class="font-semibold" style="color: #1f2937; font-size: 16px;">${formattedWeight} กก.</div>
+          </div>
+          ` : ''}
+          ${record.weigh_fee && parseFloat(record.weigh_fee) > 0 ? `
+          <div>
+            <div style="color: #6b7280; font-size: 14px; margin-bottom: 4px;">💵 ค่าชั่ง</div>
+            <div class="font-semibold" style="color: #1f2937; font-size: 16px;">${parseFloat(record.weigh_fee).toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท</div>
+          </div>
+          ` : ''}
+          ${record.wood_price_per_kg && parseFloat(record.wood_price_per_kg) > 0 ? `
+          <div>
+            <div style="color: #6b7280; font-size: 14px; margin-bottom: 4px;">📊 ราคาไม้/กก.</div>
+            <div class="font-semibold" style="color: #1f2937; font-size: 16px;">${parseFloat(record.wood_price_per_kg).toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท</div>
+          </div>
+          ` : ''}
+          <div>
+            <div style="color: #6b7280; font-size: 14px; margin-bottom: 4px;">🏦 ธนาคาร</div>
+            <div class="font-semibold" style="color: #1f2937; font-size: 16px;">${record.bank_name}</div>
+          </div>
+          <div>
+            <div style="color: #6b7280; font-size: 14px; margin-bottom: 4px;">💳 เลขบัญชี</div>
+            <div class="font-semibold" style="color: #1f2937; font-size: 16px;">${record.bank_account}</div>
+          </div>
+          <div>
+            <div style="color: #6b7280; font-size: 14px; margin-bottom: 4px;">👤 ชื่อเจ้าของบัญชี</div>
+            <div class="font-semibold" style="color: #1f2937; font-size: 16px;">${record.account_holder}</div>
+          </div>
+          ${record.note ? `
+          <div class="col-span-2">
+            <div style="color: #6b7280; font-size: 14px; margin-bottom: 4px;">📝 หมายเหตุ</div>
+            <div style="color: #1f2937; font-size: 14px;">${record.note}</div>
+          </div>
+          ` : ''}
+          
+          ${slipImageUrl || receiptImageUrl ? `
+            <div class="col-span-2 flex gap-4 mt-2 overflow-x-auto pb-2">
+              ${slipImageUrl ? `
+                <div class="flex-shrink-0">
+                  <div style="color: #6b7280; font-size: 12px; margin-bottom: 4px;">🖼️ สลิปการโอน</div>
+                  <img src="${slipImageUrl}" class="preview-thumbnail cursor-pointer" 
+                    onclick="openImageViewer('${record.slip_url}', 'สลิป: ${record.bill_id}')"
+                    style="width: 100px; height: 100px; object-fit: cover; border-radius: 8px; border: 2px solid #e5e7eb; transition: transform 0.2s;">
+                </div>
+              ` : ''}
+              ${receiptImageUrl ? `
+                <div class="flex-shrink-0">
+                  <div style="color: #6b7280; font-size: 12px; margin-bottom: 4px;">📸 รูปรายการ</div>
+                  <img src="${receiptImageUrl}" class="preview-thumbnail cursor-pointer" 
+                    onclick="openImageViewer('${record.receipt_url}', 'รูปรายการ: ${record.bill_id}')"
+                    style="width: 100px; height: 100px; object-fit: cover; border-radius: 8px; border: 2px solid #e5e7eb; transition: transform 0.2s;">
+                </div>
+              ` : ''}
+            </div>
+          ` : ''}
+        </div>
+        
+        ${isPaid ? `
+          <div class="mb-4">
+            ${record.paid_at ? `
+              <div class="mb-3" style="background: #d1fae5; padding: 12px; border-radius: 8px;">
+                <div style="color: #065f46; font-size: 14px; font-weight: 600;">
+                  ✅ จ่ายเงินเมื่อ: ${new Date(record.paid_at).toLocaleString('th-TH', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })}
+                </div>
+              </div>
+            ` : ''}
+            ${record.slip_url ? `
+              <button class="view-slip-btn inline-block px-4 py-2 rounded-lg font-semibold" data-slip-url="${record.slip_url}" data-bill-id="${record.bill_id}" data-amount="${parseFloat(record.amount).toLocaleString('th-TH', { minimumFractionDigits: 2 })}" style="background: #dbeafe; color: #1e40af; font-size: 14px; border: none; cursor: pointer;">
+                🖼️ ดูสลิปการโอน
+              </button>
+            ` : ''}
+            ${record.receipt_url ? `
+              <button class="view-receipt-btn inline-block px-4 py-2 rounded-lg font-semibold ml-2" data-receipt-url="${record.receipt_url}" data-bill-id="${record.bill_id}" style="background: #e9d5ff; color: #6b21a8; font-size: 14px; border: none; cursor: pointer;">
+                📸 ดูรูปรายการ
+              </button>
+            ` : ''}
+          </div>
+        ` : ''}
+        
+        ${!isPaid ? `
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
+            <button class="confirm-payment-btn px-6 py-3 rounded-lg font-semibold text-lg transition-all" data-record-id="${record.__backendId}" style="background: #10b981; color: #ffffff;">
+              ✅ ยืนยันการโอน
+            </button>
+            <button class="confirm-with-slip-btn px-6 py-3 rounded-lg font-semibold text-lg transition-all" data-record-id="${record.__backendId}" style="background: #3b82f6; color: #ffffff;">
+              ✅📤 ยืนยัน + แนบสลิป
+            </button>
+          </div>
+          ${record.receipt_url ? `
+          <div class="mb-3">
+            <button class="view-receipt-btn px-6 py-3 rounded-lg font-semibold text-lg w-full transition-all" data-receipt-url="${record.receipt_url}" data-bill-id="${record.bill_id}" style="background: #8b5cf6; color: #ffffff;">
+              📸 ดูรูปรายการสำหรับลูกค้า
+            </button>
+          </div>
+          ` : `
+          <div class="mb-3">
+            <button class="generate-receipt-btn px-6 py-3 rounded-lg font-semibold text-lg w-full transition-all" data-record-id="${record.__backendId}" style="background: #8b5cf6; color: #ffffff;">
+              📸 สร้างรูปรายการสำหรับลูกค้า
+            </button>
+          </div>
+          `}
+          <div class="grid grid-cols-2 gap-4">
+            <button class="edit-record-btn px-6 py-3 rounded-lg font-semibold text-lg transition-all" data-record-id="${record.__backendId}" style="background: #f59e0b; color: #ffffff;">
+              ✏️ แก้ไขข้อมูล
+            </button>
+            <button class="delete-record-btn px-6 py-3 rounded-lg font-semibold text-lg transition-all" data-record-id="${record.__backendId}" style="background: #ef4444; color: #ffffff;">
+              🗑️ ลบรายการ
+            </button>
+          </div>
+        ` : `
+          <div class="grid grid-cols-1 gap-3">
+            ${!record.slip_url ? `
+              <button class="upload-slip-btn px-6 py-3 rounded-lg font-semibold text-lg transition-all" data-record-id="${record.__backendId}" style="background: #3b82f6; color: #ffffff;">
+                📤 อัปโหลดสลิปการโอน
+              </button>
+            ` : ''}
+            <button class="delete-record-btn px-6 py-3 rounded-lg font-semibold text-lg transition-all" data-record-id="${record.__backendId}" style="background: #ef4444; color: #ffffff;">
+              🗑️ ลบรายการ
+            </button>
+          </div>
+        `}
+      `;
+
+      if (!isPaid) {
+        const confirmBtn = card.querySelector('.confirm-payment-btn');
+        confirmBtn.addEventListener('click', () => confirmPayment(record));
+
+        const confirmWithSlipBtn = card.querySelector('.confirm-with-slip-btn');
+        confirmWithSlipBtn.addEventListener('click', () => confirmPaymentWithSlip(record));
+
+        if (record.receipt_url) {
+          const viewReceiptBtn = card.querySelector('.view-receipt-btn');
+          viewReceiptBtn.addEventListener('click', () => {
+            const receiptInfo = `รูปรายการ: ${record.bill_id} | ${record.bill_name} | ${parseFloat(record.amount).toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท`;
+            openImageViewer(record.receipt_url, receiptInfo);
+          });
+        } else {
+          const generateReceiptBtn = card.querySelector('.generate-receipt-btn');
+          generateReceiptBtn.addEventListener('click', () => generateReceiptForRecord(record));
+        }
+
+        const editBtn = card.querySelector('.edit-record-btn');
+        editBtn.addEventListener('click', () => editRecord(record));
+
+        const deleteBtn = card.querySelector('.delete-record-btn');
+        deleteBtn.addEventListener('click', () => deleteRecord(record));
+      } else {
+        if (!record.slip_url) {
+          const uploadBtn = card.querySelector('.upload-slip-btn');
+          uploadBtn.addEventListener('click', () => openUploadModal(record));
+        } else {
+          const viewSlipBtn = card.querySelector('.view-slip-btn');
+          if (viewSlipBtn) {
+            viewSlipBtn.addEventListener('click', () => {
+              const billInfo = `เลขที่บิล: ${record.bill_id} | ${record.bill_name} | ${parseFloat(record.amount).toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท`;
+              openImageViewer(record.slip_url, billInfo);
+            });
+          }
+        }
+
+        if (record.receipt_url) {
+          const viewReceiptBtn = card.querySelector('.view-receipt-btn');
+          if (viewReceiptBtn) {
+            viewReceiptBtn.addEventListener('click', () => {
+              const receiptInfo = `รูปรายการ: ${record.bill_id} | ${record.bill_name} | ${parseFloat(record.amount).toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท`;
+              openImageViewer(record.receipt_url, receiptInfo);
+            });
+          }
+        }
+
+        const deleteBtn = card.querySelector('.delete-record-btn');
+        deleteBtn.addEventListener('click', () => deleteRecord(record));
+      }
+
+      return card;
+    }
+
+    async function confirmPayment(record) {
+      const confirmed = await showConfirmDialog(
+        `ยืนยันการโอนเงิน?`,
+        `คุณต้องการยืนยันว่าโอนเงินให้ ${record.account_holder} จำนวน ${parseFloat(record.amount).toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท แล้วใช่หรือไม่?`
+      );
+
+      if (!confirmed) return;
+
+      try {
+        const updatedRecord = {
+          ...record,
+          status: 'จ่ายแล้ว',
+          paid_at: new Date().toISOString()
+        };
+
+        const updateResult = await window.dataSdk.update(updatedRecord);
+
+        if (updateResult.isOk) {
+          showToast('✅ ยืนยันการโอนเงินสำเร็จ', 'success');
+        } else {
+          showToast('เกิดข้อผิดพลาด: ' + updateResult.error.message, 'error');
+        }
+      } catch (error) {
+        showToast('เกิดข้อผิดพลาด: ' + error.message, 'error');
+      }
+    }
+
+    async function confirmPaymentWithSlip(record) {
+      currentUploadRecord = record;
+      document.getElementById('modal-bill-info').textContent = `เลขที่บิล: ${record.bill_id} | ${record.bill_name} | ${parseFloat(record.amount).toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท`;
+      document.getElementById('slip-file').value = '';
+      document.getElementById('upload-modal').classList.remove('hidden');
+      document.getElementById('upload-progress').classList.add('hidden');
+    }
+
+    function createReceiptCanvas(record) {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+
+      const width = 1748;
+      const baseHeight = 2480;
+      const hasWeight = record.wood_weight && parseFloat(record.wood_weight) > 0;
+      const hasWeighFee = record.weigh_fee && parseFloat(record.weigh_fee) > 0;
+      const hasWoodPrice = record.wood_price_per_kg && parseFloat(record.wood_price_per_kg) > 0;
+
+      let additionalHeight = 0;
+      if (hasWeight) additionalHeight += 180;
+      if (hasWeighFee) additionalHeight += 180;
+      if (hasWoodPrice) additionalHeight += 180;
+
+      const height = baseHeight + additionalHeight;
+
+      canvas.width = width;
+      canvas.height = height;
+
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, width, height);
+
+      const headerY = 120;
+      ctx.fillStyle = '#000000';
+      ctx.font = 'bold 140px Arial, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('RTI PAYMENT', width / 2, headerY + 100);
+
+      ctx.font = '70px Arial, sans-serif';
+      ctx.fillText('ใบรายการ', width / 2, headerY + 200);
+
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 6;
+      ctx.beginPath();
+      ctx.moveTo(200, headerY + 260);
+      ctx.lineTo(width - 200, headerY + 260);
+      ctx.stroke();
+
+      const boxY = 480;
+      const baseBoxHeight = 1700;
+      const boxHeight = baseBoxHeight + additionalHeight;
+
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 8;
+      ctx.strokeRect(150, boxY, width - 300, boxHeight);
+
+      ctx.fillStyle = '#000000';
+      ctx.fillRect(150, boxY, width - 300, 120);
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 70px Arial, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('รายละเอียดการชำระ', width / 2, boxY + 80);
+
+      let yPos = boxY + 230;
+      const leftX = 230;
+      const rightX = width - 230;
+      const lineHeight = 165;
+
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#000000';
+      ctx.font = '55px Arial, sans-serif';
+      ctx.fillText('รหัสอ้างอิง:', leftX, yPos);
+
+      ctx.fillStyle = '#000000';
+      ctx.font = 'bold 70px Arial, sans-serif';
+      ctx.textAlign = 'right';
+      ctx.fillText(record.bill_id, rightX, yPos);
+
+      yPos += lineHeight;
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#000000';
+      ctx.font = '55px Arial, sans-serif';
+      ctx.fillText('เลขที่บิล:', leftX, yPos);
+
+      ctx.fillStyle = '#000000';
+      ctx.font = 'bold 65px Arial, sans-serif';
+      ctx.textAlign = 'right';
+      ctx.fillText(record.document_number || '-', rightX, yPos);
+
+      yPos += lineHeight;
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#000000';
+      ctx.font = '55px Arial, sans-serif';
+      ctx.fillText('ชื่อบิล:', leftX, yPos);
+
+      ctx.fillStyle = '#000000';
+      ctx.font = 'bold 65px Arial, sans-serif';
+      ctx.textAlign = 'right';
+      const maxWidth = rightX - leftX - 400;
+      ctx.fillText(record.bill_name, rightX, yPos, maxWidth);
+
+      yPos += lineHeight;
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#000000';
+      ctx.font = '55px Arial, sans-serif';
+      ctx.fillText('ทะเบียนรถ:', leftX, yPos);
+
+      ctx.fillStyle = '#000000';
+      ctx.font = 'bold 65px Arial, sans-serif';
+      ctx.textAlign = 'right';
+      ctx.fillText(record.license_plate, rightX, yPos);
+
+      yPos += lineHeight;
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#000000';
+      ctx.font = '55px Arial, sans-serif';
+      ctx.fillText('วันที่:', leftX, yPos);
+
+      ctx.fillStyle = '#000000';
+      ctx.font = 'bold 65px Arial, sans-serif';
+      ctx.textAlign = 'right';
+      const recordDate = new Date(record.created_at);
+      const thaiDate = recordDate.toLocaleDateString('th-TH', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+      ctx.fillText(thaiDate, rightX, yPos);
+
+      if (hasWeight) {
+        yPos += lineHeight;
+        ctx.textAlign = 'left';
+        ctx.fillStyle = '#000000';
+        ctx.font = '55px Arial, sans-serif';
+        ctx.fillText('น้ำหนักไม้:', leftX, yPos);
+
+        const woodWeight = parseFloat(record.wood_weight);
+        const formattedWeight = woodWeight.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+        ctx.fillStyle = '#000000';
+        ctx.font = 'bold 75px Arial, sans-serif';
+        ctx.textAlign = 'right';
+        ctx.fillText(formattedWeight + ' กก.', rightX, yPos);
+      }
+
+      if (hasWeighFee) {
+        yPos += lineHeight;
+        ctx.textAlign = 'left';
+        ctx.fillStyle = '#000000';
+        ctx.font = '55px Arial, sans-serif';
+        ctx.fillText('ค่าชั่ง:', leftX, yPos);
+
+        const weighFee = parseFloat(record.weigh_fee);
+        const formattedFee = weighFee.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+        ctx.fillStyle = '#000000';
+        ctx.font = 'bold 75px Arial, sans-serif';
+        ctx.textAlign = 'right';
+        ctx.fillText(formattedFee + ' บาท', rightX, yPos);
+      }
+
+      if (hasWoodPrice) {
+        yPos += lineHeight;
+        ctx.textAlign = 'left';
+        ctx.fillStyle = '#000000';
+        ctx.font = '55px Arial, sans-serif';
+        ctx.fillText('ราคาไม้/กก.:', leftX, yPos);
+
+        const woodPrice = parseFloat(record.wood_price_per_kg);
+        const formattedPrice = woodPrice.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+        ctx.fillStyle = '#000000';
+        ctx.font = 'bold 75px Arial, sans-serif';
+        ctx.textAlign = 'right';
+        ctx.fillText(formattedPrice + ' บาท', rightX, yPos);
+      }
+
+      yPos += lineHeight - 30;
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(leftX, yPos);
+      ctx.lineTo(rightX, yPos);
+      ctx.stroke();
+
+      yPos += 100;
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#000000';
+      ctx.font = '55px Arial, sans-serif';
+      ctx.fillText('ยอดเงิน:', leftX, yPos);
+
+      const amount = parseFloat(record.amount);
+      const formattedAmount = amount.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+      ctx.fillStyle = '#000000';
+      ctx.font = 'bold 100px Arial, sans-serif';
+      ctx.textAlign = 'right';
+      ctx.fillText(formattedAmount + ' บาท', rightX, yPos);
+
+      return canvas;
+    }
+
+    async function showReceiptModalAfterSave(record) {
+      const overlay = document.createElement('div');
+      overlay.style.cssText = 'position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 1002; display: flex; align-items: center; justify-content: center; padding: 20px; animation: fadeIn 0.2s; overflow-y: auto;';
+
+      const dialog = document.createElement('div');
+      dialog.style.cssText = 'background: #ffffff; border-radius: 16px; padding: 32px; max-width: 600px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.5); animation: slideUp 0.3s; position: relative; max-height: 90%; overflow-y: auto;';
+
+      const canvas = createReceiptCanvas(record);
+      const imageDataUrl = canvas.toDataURL('image/jpeg', 0.95);
+
+      dialog.innerHTML = `
+        <button class="close-receipt-dialog-btn" style="position: absolute; top: 16px; right: 16px; background: #ef4444; color: #ffffff; width: 36px; height: 36px; border-radius: 50%; font-size: 20px; font-weight: bold; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">
+          ×
+        </button>
+        
+        <div style="text-align: center; margin-bottom: 20px;">
+          <div style="width: 70px; height: 70px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 16px; box-shadow: 0 8px 16px rgba(16, 185, 129, 0.3);">
+            <span style="font-size: 36px;">✅</span>
+          </div>
+          <h3 class="font-bold mb-2" style="color: #1f2937; font-size: 22px;">บันทึกสำเร็จ!</h3>
+          <p style="color: #6b7280; font-size: 15px; margin-bottom: 4px;">เลขที่บิล: <span style="color: #667eea; font-weight: 700;">${record.bill_id}</span></p>
+          <p style="color: #10b981; font-size: 17px; font-weight: 600;">${parseFloat(record.amount).toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท</p>
+        </div>
+        
+        <div style="margin-bottom: 20px; text-align: center;">
+          <p style="color: #1f2937; font-size: 16px; font-weight: 600; margin-bottom: 12px;">📸 รูปรายการสำหรับลูกค้า</p>
+          <img class="receipt-preview-img" src="${imageDataUrl}" style="max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+        </div>
+        
+        <div class="flex gap-3">
+          <button class="save-receipt-btn flex-1 px-6 py-3 rounded-lg font-bold text-lg transition-all" style="background: #10b981; color: #ffffff; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);">
+            💾 บันทึกรูป
+          </button>
+          <button class="print-receipt-btn-modal flex-1 px-6 py-3 rounded-lg font-bold text-lg transition-all" style="background: #3b82f6; color: #ffffff; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);">
+            🖨️ ปริ้นสลิป
+          </button>
+        </div>
+      `;
+
+      overlay.appendChild(dialog);
+      document.body.appendChild(overlay);
+
+      dialog.querySelector('.close-receipt-dialog-btn').addEventListener('click', () => {
+        document.body.removeChild(overlay);
+      });
+
+      dialog.querySelector('.save-receipt-btn').addEventListener('click', async () => {
+        const saveBtn = dialog.querySelector('.save-receipt-btn');
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<div class="spinner"></div> กำลังบันทึก...';
+        saveBtn.style.opacity = '0.5';
+
+        try {
+          const link = document.createElement('a');
+          link.download = `RTI_Receipt_${record.bill_id}.jpg`;
+          link.href = imageDataUrl;
+          link.click();
+
+          canvas.toBlob(async (blob) => {
+            const reader = new FileReader();
+            reader.onload = async function (e) {
+              const base64Data = e.target.result.split(',')[1];
+
+              const params = new URLSearchParams({
+                action: 'uploadReceipt',
+                billId: record.bill_id,
+                fileName: `RTI_Receipt_${record.bill_id}.jpg`,
+                mimeType: 'image/jpeg',
+                fileData: base64Data,
+                folderId: RECEIPT_FOLDER_ID
+              });
+
+              const response = await fetch(APPS_SCRIPT_URL, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: params.toString()
+              });
+
+              const result = await response.json();
+
+              if (result.success) {
+                const latestRecord = allRecords.find(r => r.bill_id === record.bill_id);
+                if (latestRecord) {
+                  const updatedRecord = {
+                    ...latestRecord,
+                    receipt_url: result.fileUrl
+                  };
+
+                  await dataService.update(updatedRecord);
+                }
+              }
+            };
+            reader.readAsDataURL(blob);
+          }, 'image/jpeg', 0.95);
+
+          showToast('✅ บันทึกรูปสำเร็จ!', 'success');
+          document.body.removeChild(overlay);
+        } catch (error) {
+          showToast('เกิดข้อผิดพลาด: ' + error.message, 'error');
+        }
+
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = '💾 บันทึกรูป';
+        saveBtn.style.opacity = '1';
+      });
+
+      dialog.querySelector('.print-receipt-btn-modal').addEventListener('click', () => {
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(`
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>Print Receipt - ${record.bill_id}</title>
+            <style>
+              @page {
+                size: A5;
+                margin: 0;
+              }
+              html, body {
+                margin: 0;
+                padding: 0;
+                height: 100%;
+                width: 100%;
+                overflow: hidden;
+              }
+              body {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                background: white;
+              }
+              img {
+                max-width: 100%;
+                max-height: 100%;
+                object-fit: contain;
+                display: block;
+                page-break-after: avoid;
+                page-break-inside: avoid;
+              }
+            </style>
+          </head>
+          <body>
+            <img src="${imageDataUrl}" onload="window.print(); window.close();" />
+          </body>
+          </html>
+        `);
+        printWindow.document.close();
+
+        showToast('✅ กำลังเปิดหน้าปริ้น...', 'success');
+      });
+    }
+
+    async function generateReceiptForRecord(record) {
+      showToast('⏳ กำลังสร้างรูปรายการ...', 'loading');
+
+      const canvas = createReceiptCanvas(record);
+      const imageDataUrl = canvas.toDataURL('image/jpeg', 0.95);
+
+      const overlay = document.createElement('div');
+      overlay.style.cssText = 'position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 1002; display: flex; align-items: center; justify-content: center; padding: 20px; animation: fadeIn 0.2s; overflow-y: auto;';
+
+      const dialog = document.createElement('div');
+      dialog.style.cssText = 'background: #ffffff; border-radius: 16px; padding: 32px; max-width: 600px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.5); position: relative; max-height: 90%; overflow-y: auto;';
+
+      dialog.innerHTML = `
+        <button class="close-receipt-dialog-btn" style="position: absolute; top: 16px; right: 16px; background: #ef4444; color: #ffffff; width: 36px; height: 36px; border-radius: 50%; font-size: 20px; font-weight: bold; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">
+          ×
+        </button>
+        
+        <h3 class="font-bold mb-4 text-center" style="color: #1f2937; font-size: 22px;">📸 รูปรายการสำหรับลูกค้า</h3>
+        
+        <div style="margin-bottom: 20px; text-align: center;">
+          <img src="${imageDataUrl}" style="max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+        </div>
+        
+        <div class="flex gap-3">
+          <button class="save-receipt-btn flex-1 px-6 py-3 rounded-lg font-bold text-lg transition-all" style="background: #10b981; color: #ffffff;">
+            💾 บันทึกรูป
+          </button>
+          <button class="print-receipt-btn-modal flex-1 px-6 py-3 rounded-lg font-bold text-lg transition-all" style="background: #3b82f6; color: #ffffff;">
+            🖨️ ปริ้นสลิป
+          </button>
+        </div>
+      `;
+
+      overlay.appendChild(dialog);
+      document.body.appendChild(overlay);
+
+      dialog.querySelector('.close-receipt-dialog-btn').addEventListener('click', () => {
+        document.body.removeChild(overlay);
+      });
+
+      dialog.querySelector('.save-receipt-btn').addEventListener('click', async () => {
+        const saveBtn = dialog.querySelector('.save-receipt-btn');
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<div class="spinner"></div> กำลังบันทึก...';
+        saveBtn.style.opacity = '0.5';
+
+        try {
+          const link = document.createElement('a');
+          link.download = `RTI_Receipt_${record.bill_id}.jpg`;
+          link.href = imageDataUrl;
+          link.click();
+
+          canvas.toBlob(async (blob) => {
+            const reader = new FileReader();
+            reader.onload = async function (e) {
+              const base64Data = e.target.result.split(',')[1];
+
+              const params = new URLSearchParams({
+                action: 'uploadReceipt',
+                billId: record.bill_id,
+                fileName: `RTI_Receipt_${record.bill_id}.jpg`,
+                mimeType: 'image/jpeg',
+                fileData: base64Data,
+                folderId: RECEIPT_FOLDER_ID
+              });
+
+              const response = await fetch(APPS_SCRIPT_URL, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: params.toString()
+              });
+
+              const result = await response.json();
+
+              if (result.success) {
+                const updatedRecord = {
+                  ...record,
+                  receipt_url: result.fileUrl
+                };
+
+                await dataService.update(updatedRecord);
+              }
+            };
+            reader.readAsDataURL(blob);
+          }, 'image/jpeg', 0.95);
+
+          showToast('✅ บันทึกรูปสำเร็จ!', 'success');
+          document.body.removeChild(overlay);
+        } catch (error) {
+          showToast('เกิดข้อผิดพลาด: ' + error.message, 'error');
+        }
+
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = '💾 บันทึกรูป';
+        saveBtn.style.opacity = '1';
+      });
+
+      dialog.querySelector('.print-receipt-btn-modal').addEventListener('click', () => {
+        const printWindow = window.open('', '_blank');
+        printWindow.document.write(`
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <title>Print Receipt - ${record.bill_id}</title>
+            <style>
+              @page {
+                size: A5;
+                margin: 0;
+              }
+              html, body {
+                margin: 0;
+                padding: 0;
+                height: 100%;
+                width: 100%;
+                overflow: hidden;
+              }
+              body {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                background: white;
+              }
+              img {
+                max-width: 100%;
+                max-height: 100%;
+                object-fit: contain;
+                display: block;
+                page-break-after: avoid;
+                page-break-inside: avoid;
+              }
+            </style>
+          </head>
+          <body>
+            <img src="${imageDataUrl}" onload="window.print(); window.close();" />
+          </body>
+          </html>
+        `);
+        printWindow.document.close();
+
+        showToast('✅ กำลังเปิดหน้าปริ้น...', 'success');
+      });
+    }
+
+    function showConfirmDialog(title, message) {
+      return new Promise((resolve) => {
+        const overlay = document.createElement('div');
+        overlay.style.cssText = 'position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: center; justify-content: center;';
+
+        const dialog = document.createElement('div');
+        dialog.style.cssText = 'background: #ffffff; border-radius: 12px; padding: 32px; max-width: 500px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.3);';
+
+        dialog.innerHTML = `
+          <h3 class="font-bold mb-4" style="color: #1f2937; font-size: 20px;">${title}</h3>
+          <p class="mb-6" style="color: #6b7280; font-size: 16px;">${message}</p>
+          <div class="flex gap-4">
+            <button id="confirm-yes" class="flex-1 px-6 py-3 rounded-lg font-semibold text-lg transition-all" style="background: #10b981; color: #ffffff;">
+              ✅ ยืนยัน
+            </button>
+            <button id="confirm-no" class="flex-1 px-6 py-3 rounded-lg font-semibold text-lg transition-all" style="background: #f3f4f6; color: #6b7280;">
+              ❌ ยกเลิก
+            </button>
+          </div>
+        `;
+
+        overlay.appendChild(dialog);
+        document.body.appendChild(overlay);
+
+        dialog.querySelector('#confirm-yes').addEventListener('click', () => {
+          document.body.removeChild(overlay);
+          resolve(true);
+        });
+
+        dialog.querySelector('#confirm-no').addEventListener('click', () => {
+          document.body.removeChild(overlay);
+          resolve(false);
+        });
+      });
+    }
+
+    function showPasswordDialog(title, message) {
+      return new Promise((resolve) => {
+        const overlay = document.createElement('div');
+        overlay.style.cssText = 'position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: center; justify-content: center;';
+
+        const dialog = document.createElement('div');
+        dialog.style.cssText = 'background: #ffffff; border-radius: 12px; padding: 32px; max-width: 500px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.3);';
+
+        dialog.innerHTML = `
+          <h3 class="font-bold mb-4" style="color: #ef4444; font-size: 20px;">🔒 ${title}</h3>
+          <p class="mb-4" style="color: #6b7280; font-size: 16px;">${message}</p>
+          <input type="password" id="password-input" placeholder="ใส่รหัสผ่าน" class="w-full px-4 py-3 rounded-lg mb-6" style="background: #ffffff; border: 2px solid #d1d5db; font-size: 16px;">
+          <div id="password-error" class="hidden mb-4" style="background: #fee2e2; padding: 12px; border-radius: 8px; color: #991b1b; font-size: 14px; font-weight: 600;">
+            ❌ รหัสผ่านไม่ถูกต้อง
+          </div>
+          <div class="flex gap-4">
+            <button id="password-confirm" class="flex-1 px-6 py-3 rounded-lg font-semibold text-lg transition-all" style="background: #ef4444; color: #ffffff;">
+              🗑️ ยืนยันลบ
+            </button>
+            <button id="password-cancel" class="flex-1 px-6 py-3 rounded-lg font-semibold text-lg transition-all" style="background: #f3f4f6; color: #6b7280;">
+              ❌ ยกเลิก
+            </button>
+          </div>
+        `;
+
+        overlay.appendChild(dialog);
+        document.body.appendChild(overlay);
+
+        const passwordInput = dialog.querySelector('#password-input');
+        const errorDiv = dialog.querySelector('#password-error');
+
+        passwordInput.focus();
+
+        const checkPassword = () => {
+          const password = passwordInput.value;
+          if (password === 'Rti059') {
+            document.body.removeChild(overlay);
+            resolve(true);
+          } else {
+            errorDiv.classList.remove('hidden');
+            passwordInput.value = '';
+            passwordInput.style.borderColor = '#ef4444';
+            setTimeout(() => {
+              errorDiv.classList.add('hidden');
+              passwordInput.style.borderColor = '#d1d5db';
+            }, 2000);
+          }
+        };
+
+        dialog.querySelector('#password-confirm').addEventListener('click', checkPassword);
+
+        passwordInput.addEventListener('keypress', (e) => {
+          if (e.key === 'Enter') {
+            checkPassword();
+          }
+        });
+
+        dialog.querySelector('#password-cancel').addEventListener('click', () => {
+          document.body.removeChild(overlay);
+          resolve(false);
+        });
+      });
+    }
+
+    async function deleteRecord(record) {
+      const confirmed = await showPasswordDialog(
+        'ลบรายการ',
+        `กรุณาใส่รหัสผ่านเพื่อลบรายการ ${record.bill_id} - ${record.bill_name} (${parseFloat(record.amount).toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท)`
+      );
+
+      if (!confirmed) return;
+
+      try {
+        const deleteResult = await dataService.delete(record);
+
+        if (deleteResult.isOk) {
+          showToast(`✅ ลบรายการ ${record.bill_id} สำเร็จ`, 'success');
+        } else {
+          showToast('เกิดข้อผิดพลาด: ' + deleteResult.error.message, 'error');
+        }
+      } catch (error) {
+        showToast('เกิดข้อผิดพลาด: ' + error.message, 'error');
+      }
+    }
+
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+
+      const colors = {
+        success: { bg: '#d1fae5', text: '#065f46', icon: '✅' },
+        error: { bg: '#fee2e2', text: '#991b1b', icon: '❌' },
+        loading: { bg: '#dbeafe', text: '#1e40af', icon: '⏳' },
+        info: { bg: '#e0e7ff', text: '#3730a3', icon: 'ℹ️' }
+      };
+
+      const style = colors[type] || colors.info;
+
+      toast.style.cssText = `background: ${style.bg}; color: ${style.text}; padding: 16px 24px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); font-size: 16px; font-weight: 600; animation: slideUp 0.3s; max-width: 400px;`;
+      toast.textContent = `${style.icon} ${message}`;
+
+      container.appendChild(toast);
+
+      setTimeout(() => {
+        toast.style.animation = 'fadeIn 0.3s reverse';
+        setTimeout(() => {
+          if (container.contains(toast)) {
+            container.removeChild(toast);
+          }
+        }, 300);
+      }, 3000);
+    }
+
+    function openUploadModal(record) {
+      currentUploadRecord = record;
+      document.getElementById('modal-bill-info').textContent = `เลขที่บิล: ${record.bill_id} | ${record.bill_name} | ${parseFloat(record.amount).toLocaleString('th-TH', { minimumFractionDigits: 2 })} บาท`;
+      document.getElementById('slip-file').value = '';
+      document.getElementById('upload-modal').classList.remove('hidden');
+      document.getElementById('upload-progress').classList.add('hidden');
+    }
+
+    function closeUploadModal() {
+      document.getElementById('upload-modal').classList.add('hidden');
+      currentUploadRecord = null;
+    }
+
+    function editRecord(record) {
+      currentEditRecord = record;
+
+      document.getElementById('edit-bill-id').value = record.bill_id;
+      document.getElementById('edit-document-number').value = record.document_number || '';
+      document.getElementById('edit-license-plate').value = record.license_plate;
+      document.getElementById('edit-bill-name').value = record.bill_name;
+      document.getElementById('edit-amount').value = parseFloat(record.amount);
+      document.getElementById('edit-wood-weight').value = record.wood_weight ? parseFloat(record.wood_weight) : '';
+      document.getElementById('edit-weigh-fee').value = record.weigh_fee ? parseFloat(record.weigh_fee) : '';
+      document.getElementById('edit-wood-price-per-kg').value = record.wood_price_per_kg ? parseFloat(record.wood_price_per_kg) : '';
+      document.getElementById('edit-bank-account').value = record.bank_account;
+      document.getElementById('edit-account-holder').value = record.account_holder;
+      document.getElementById('edit-bank-name').value = record.bank_name;
+      document.getElementById('edit-note').value = record.note || '';
+
+      document.getElementById('edit-modal').classList.remove('hidden');
+      document.getElementById('edit-message').classList.add('hidden');
+    }
+
+    function closeEditModal() {
+      document.getElementById('edit-modal').classList.add('hidden');
+      currentEditRecord = null;
+    }
+
+    function fileToBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result.split(',')[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function compressImage(file, maxWidth = 800, quality = 0.7) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const img = new Image();
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            let width = img.width;
+            let height = img.height;
+
+            if (width > maxWidth) {
+              height = (height * maxWidth) / width;
+              width = maxWidth;
+            }
+
+            canvas.width = width;
+            canvas.height = height;
+
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+
+            canvas.toBlob(
+              (blob) => {
+                if (blob) {
+                  resolve(new File([blob], file.name.replace(/\.\w+$/, '.jpg'), {
+                    type: 'image/jpeg',
+                    lastModified: Date.now()
+                  }));
+                } else {
+                  reject(new Error('ไม่สามารถบีบอัดรูปได้'));
+                }
+              },
+              'image/jpeg',
+              quality
+            );
+          };
+          img.onerror = () => reject(new Error('ไม่สามารถโหลดรูปภาพได้'));
+          img.src = e.target.result;
+        };
+        reader.onerror = () => reject(new Error('ไม่สามารถอ่านไฟล์ได้'));
+        reader.readAsDataURL(file);
+      });
+    }
+
+    async function uploadSlip() {
+      const fileInput = document.getElementById('slip-file');
+      const file = fileInput.files[0];
+
+      if (!file) {
+        showMessage('กรุณาเลือกไฟล์สลิป', 'error', 'upload-progress');
+        return;
+      }
+
+      if (!file.type.startsWith('image/')) {
+        showMessage('กรุณาเลือกไฟล์รูปภาพเท่านั้น', 'error', 'upload-progress');
+        return;
+      }
+
+      const progressDiv = document.getElementById('upload-progress');
+      progressDiv.classList.remove('hidden');
+      showMessage('กำลังบีบอัดรูปภาพ...', 'loading', 'upload-progress');
+
+      const uploadBtn = document.getElementById('upload-confirm-btn');
+      const cancelBtn = document.getElementById('upload-cancel-btn');
+      uploadBtn.disabled = true;
+      cancelBtn.disabled = true;
+      uploadBtn.style.opacity = '0.5';
+      cancelBtn.style.opacity = '0.5';
+
+      try {
+        const originalSize = (file.size / 1024).toFixed(2);
+        showMessage(`กำลังบีบอัดรูปภาพ... (ขนาดเริ่มต้น: ${originalSize} KB)`, 'loading', 'upload-progress');
+
+        const compressedFile = await compressImage(file, 800, 0.7);
+        const compressedSize = (compressedFile.size / 1024).toFixed(2);
+        const savedPercent = (((file.size - compressedFile.size) / file.size) * 100).toFixed(0);
+
+        showMessage(`กำลังอัปโหลด... (ลดขนาดได้ ${savedPercent}% เหลือ ${compressedSize} KB)`, 'loading', 'upload-progress');
+
+        const base64Data = await fileToBase64(compressedFile);
+
+        const params = new URLSearchParams({
+          action: 'uploadSlip',
+          billId: currentUploadRecord.bill_id,
+          fileName: compressedFile.name,
+          mimeType: compressedFile.type,
+          fileData: base64Data
+        });
+
+        const response = await fetch(APPS_SCRIPT_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+          },
+          body: params.toString()
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          const updatedRecord = {
+            ...currentUploadRecord,
+            status: 'จ่ายแล้ว',
+            slip_url: result.fileUrl,
+            paid_at: new Date().toISOString()
+          };
+
+          const updateResult = await dataService.update(updatedRecord);
+
+          if (updateResult.isOk) {
+            showMessage('อัปโหลดสลิปสำเร็จ!', 'success', 'upload-progress');
+            setTimeout(() => {
+              closeUploadModal();
+            }, 1500);
+          } else {
+            showMessage('เกิดข้อผิดพลาด: ' + updateResult.error.message, 'error', 'upload-progress');
+          }
+        } else {
+          showMessage('เกิดข้อผิดพลาดในการอัปโหลด: ' + result.message, 'error', 'upload-progress');
+        }
+      } catch (error) {
+        showMessage('เกิดข้อผิดพลาด: ' + error.message, 'error', 'upload-progress');
+      }
+
+      uploadBtn.disabled = false;
+      cancelBtn.disabled = false;
+      uploadBtn.style.opacity = '1';
+      cancelBtn.style.opacity = '1';
+    }
+
+    function showMessage(message, type, containerId = 'employee-message') {
+      const container = document.getElementById(containerId);
+      container.classList.remove('hidden');
+
+      const colors = {
+        success: { bg: '#d1fae5', text: '#065f46', icon: '✅' },
+        error: { bg: '#fee2e2', text: '#991b1b', icon: '❌' },
+        loading: { bg: '#dbeafe', text: '#1e40af', icon: '⏳' }
+      };
+
+      const style = colors[type] || colors.loading;
+      container.innerHTML = `
+        <div style="background: ${style.bg}; padding: 16px; border-radius: 8px; color: ${style.text}; font-size: 16px; font-weight: 600;">
+          ${style.icon} ${message}
+        </div>
+      `;
+
+      if (type === 'success') {
+        setTimeout(() => container.classList.add('hidden'), 3000);
+      }
+    }
+
+    function calculateAmount() {
+      const woodWeight = parseFloat(document.getElementById('wood-weight').value) || 0;
+      const woodPrice = parseFloat(document.getElementById('wood-price-per-kg').value) || 0;
+      const weighFee = parseFloat(document.getElementById('weigh-fee').value) || 0;
+
+      if (woodWeight > 0 && woodPrice > 0) {
+        const totalAmount = (woodWeight * woodPrice) - weighFee;
+        const finalAmount = Math.max(0, totalAmount);
+        document.getElementById('amount').value = finalAmount.toFixed(2);
+        document.getElementById('amount').readOnly = true;
+      } else {
+        document.getElementById('amount').readOnly = false;
+      }
+    }
+
+    document.getElementById('employee-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      if (!sdkInitialized) {
+        showMessage('⏳ กำลังเตรียมระบบ กรุณารอสักครู่...', 'loading');
+        return;
+      }
+
+      if (allRecords.length >= 999) {
+        showMessage('⚠️ ถึงขีดจำกัด 999 รายการแล้ว กรุณาลบรายการเก่าก่อน', 'error');
+        return;
+      }
+
+      const submitBtn = document.getElementById('submit-btn');
+      const originalText = submitBtn.innerHTML;
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<div class="spinner"></div> กำลังบันทึก...';
+      submitBtn.style.opacity = '0.7';
+
+      showMessage('กำลังบันทึกข้อมูล...', 'loading');
+
+      try {
+        const woodWeightValue = document.getElementById('wood-weight').value;
+        const weighFeeValue = document.getElementById('weigh-fee').value;
+        const woodPriceValue = document.getElementById('wood-price-per-kg').value;
+
+        const record = {
+          bill_id: document.getElementById('bill-id-auto').value,
+          document_number: document.getElementById('document-number').value.trim(),
+          license_plate: document.getElementById('license-plate').value,
+          bill_name: document.getElementById('bill-name').value,
+          amount: parseFloat(document.getElementById('amount').value),
+          wood_weight: woodWeightValue ? parseFloat(woodWeightValue) : null,
+          weigh_fee: weighFeeValue ? parseFloat(weighFeeValue) : null,
+          wood_price_per_kg: woodPriceValue ? parseFloat(woodPriceValue) : null,
+          bank_account: document.getElementById('bank-account').value,
+          bank_name: document.getElementById('bank-name').value,
+          account_holder: document.getElementById('account-holder').value,
+          note: document.getElementById('note').value,
+          status: 'รอจ่าย',
+          slip_url: '',
+          receipt_url: '',
+          created_at: new Date().toISOString(),
+          paid_at: ''
+        };
+
+        const result = await dataService.create(record);
+
+        if (result.isOk) {
+          document.getElementById('employee-form').reset();
+          document.getElementById('bill-id-auto').value = generateBillId();
+          document.getElementById('amount').readOnly = false;
+
+          setTimeout(() => {
+            showReceiptModalAfterSave(record);
+          }, 500);
+        } else {
+          showMessage('เกิดข้อผิดพลาด: ' + result.error.message, 'error');
+        }
+      } catch (error) {
+        showMessage('เกิดข้อผิดพลาด: ' + error.message, 'error');
+      }
+
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = originalText;
+      submitBtn.style.opacity = '1';
+    });
+
+    document.getElementById('bank-account').addEventListener('input', (e) => {
+      const accountNumber = e.target.value;
+      if (bankAccountMap.has(accountNumber)) {
+        const info = bankAccountMap.get(accountNumber);
+        // Correct assignment: Bank goes to Bank, Holder goes to Holder
+        document.getElementById('bank-name').value = info.bank_name;
+        document.getElementById('account-holder').value = info.account_holder;
+      }
+    });
+
+    document.getElementById('account-holder').addEventListener('input', (e) => {
+      const holderName = e.target.value;
+      if (holderToAccountMap.has(holderName)) {
+        const accounts = holderToAccountMap.get(holderName);
+        if (accounts && accounts.length > 0) {
+          // Ensuring bank information is filled correctly when holder is selected
+          document.getElementById('bank-account').value = accounts[0].bank_account;
+          document.getElementById('bank-name').value = accounts[0].bank_name;
+        }
+      }
+    });
+
+    document.getElementById('reset-btn').addEventListener('click', () => {
+      document.getElementById('employee-form').reset();
+      document.getElementById('bill-id-auto').value = generateBillId();
+      document.getElementById('employee-message').classList.add('hidden');
+      document.getElementById('amount').readOnly = false;
+    });
+
+    document.getElementById('wood-weight').addEventListener('input', calculateAmount);
+    document.getElementById('wood-price-per-kg').addEventListener('input', calculateAmount);
+    document.getElementById('weigh-fee').addEventListener('input', calculateAmount);
+
+    // Old tab switchers removed (now handled by initializeTabs)
+
+
+    document.getElementById('subtab-pending').addEventListener('click', () => {
+      document.getElementById('pending-list').classList.remove('hidden');
+      document.getElementById('paid-list').classList.add('hidden');
+
+      document.getElementById('subtab-pending').style.background = '#667eea';
+      document.getElementById('subtab-pending').style.color = '#ffffff';
+
+      document.getElementById('subtab-paid').style.background = '#f3f4f6';
+      document.getElementById('subtab-paid').style.color = '#6b7280';
+    });
+
+    document.getElementById('subtab-paid').addEventListener('click', () => {
+      document.getElementById('pending-list').classList.add('hidden');
+      document.getElementById('paid-list').classList.remove('hidden');
+
+      document.getElementById('subtab-paid').style.background = '#667eea';
+      document.getElementById('subtab-paid').style.color = '#ffffff';
+
+      document.getElementById('subtab-pending').style.background = '#f3f4f6';
+      document.getElementById('subtab-pending').style.color = '#6b7280';
+    });
+
+    document.getElementById('employer-search').addEventListener('input', () => {
+      renderEmployerLists();
+    });
+
+    document.getElementById('upload-cancel-btn').addEventListener('click', closeUploadModal);
+    document.getElementById('upload-confirm-btn').addEventListener('click', uploadSlip);
+
+    document.getElementById('edit-cancel-btn').addEventListener('click', closeEditModal);
+
+    document.getElementById('edit-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      if (!currentEditRecord) return;
+
+      const saveBtn = document.getElementById('edit-save-btn');
+      const originalText = saveBtn.innerHTML;
+      saveBtn.disabled = true;
+      saveBtn.innerHTML = '<div class="spinner"></div> กำลังบันทึก...';
+      saveBtn.style.opacity = '0.7';
+
+      showMessage('กำลังบันทึกการแก้ไข...', 'loading', 'edit-message');
+
+      try {
+        const woodWeightValue = document.getElementById('edit-wood-weight').value;
+        const weighFeeValue = document.getElementById('edit-weigh-fee').value;
+        const woodPriceValue = document.getElementById('edit-wood-price-per-kg').value;
+
+        const updatedRecord = {
+          ...currentEditRecord,
+          document_number: document.getElementById('edit-document-number').value.trim(),
+          license_plate: document.getElementById('edit-license-plate').value,
+          bill_name: document.getElementById('edit-bill-name').value,
+          amount: parseFloat(document.getElementById('edit-amount').value),
+          wood_weight: woodWeightValue ? parseFloat(woodWeightValue) : null,
+          weigh_fee: weighFeeValue ? parseFloat(weighFeeValue) : null,
+          wood_price_per_kg: woodPriceValue ? parseFloat(woodPriceValue) : null,
+          bank_account: document.getElementById('edit-bank-account').value,
+          account_holder: document.getElementById('edit-account-holder').value,
+          bank_name: document.getElementById('edit-bank-name').value,
+          note: document.getElementById('edit-note').value
+        };
+
+        const updateResult = await dataService.update(updatedRecord);
+
+        if (updateResult.isOk) {
+          showMessage('✅ แก้ไขข้อมูลสำเร็จ!', 'success', 'edit-message');
+          setTimeout(() => {
+            closeEditModal();
+          }, 1500);
+        } else {
+          showMessage('เกิดข้อผิดพลาด: ' + updateResult.error.message, 'error', 'edit-message');
+        }
+      } catch (error) {
+        showMessage('เกิดข้อผิดพลาด: ' + error.message, 'error', 'edit-message');
+      }
+
+      saveBtn.disabled = false;
+      saveBtn.innerHTML = originalText;
+      saveBtn.style.opacity = '1';
+    });
+
+    function openImageViewer(imageUrl, billInfo) {
+      const directUrl = getDirectImageUrl(imageUrl);
+      document.getElementById('viewer-image').src = directUrl;
+      document.getElementById('viewer-info').textContent = billInfo;
+      document.getElementById('viewer-drive-link').href = imageUrl;
+      document.getElementById('image-viewer-modal').classList.remove('hidden');
+    }
+
+    function closeImageViewer() {
+      document.getElementById('image-viewer-modal').classList.add('hidden');
+      document.getElementById('viewer-image').src = '';
+    }
+
+    document.getElementById('close-image-viewer').addEventListener('click', closeImageViewer);
+    document.getElementById('image-viewer-modal').addEventListener('click', (e) => {
+      if (e.target.id === 'image-viewer-modal') {
+        closeImageViewer();
+      }
+    });
+
+    function searchByBillId() {
+      const searchBillId = document.getElementById('search-bill-id').value.trim();
+      const resultDiv = document.getElementById('search-result');
+
+      if (!searchBillId) {
+        resultDiv.classList.remove('hidden');
+        resultDiv.innerHTML = '<div style="background: #fef3c7; padding: 20px; border-radius: 8px; text-align: center; color: #92400e; font-size: 16px;">❌ กรุณาใส่เลขที่บิล</div>';
+        return;
+      }
+
+      const record = allRecords.find(r => r.bill_id.toLowerCase() === searchBillId.toLowerCase());
+
+      if (record) {
+        resultDiv.classList.remove('hidden');
+        resultDiv.innerHTML = '';
+
+        const card = createRecordCard(record, record.status === 'จ่ายแล้ว');
+        resultDiv.appendChild(card);
+      } else {
+        resultDiv.classList.remove('hidden');
+        resultDiv.innerHTML = '<div style="background: #fee2e2; padding: 20px; border-radius: 8px; text-align: center; color: #991b1b; font-size: 16px;">❌ ไม่พบรายการที่มีเลขที่บิล: ' + searchBillId + '</div>';
+      }
+    }
+
+    function searchByBillName() {
+      const searchBillName = document.getElementById('search-bill-name').value.trim();
+      const resultDiv = document.getElementById('search-bill-name-result');
+
+      if (!searchBillName) {
+        resultDiv.classList.remove('hidden');
+        resultDiv.innerHTML = '<div style="background: #fef3c7; padding: 20px; border-radius: 8px; text-align: center; color: #92400e; font-size: 16px;">❌ กรุณาใส่ชื่อบิล</div>';
+        return;
+      }
+
+      const matchingRecords = allRecords.filter(r =>
+        r.bill_name.toLowerCase().includes(searchBillName.toLowerCase())
+      );
+
+      if (matchingRecords.length > 0) {
+        resultDiv.classList.remove('hidden');
+        resultDiv.innerHTML = `<div style="color: #1f2937; font-size: 16px; font-weight: 600; margin-bottom: 16px;">พบ ${matchingRecords.length} รายการ</div>`;
+
+        matchingRecords.forEach(record => {
+          const card = createRecordCard(record, record.status === 'จ่ายแล้ว');
+          card.style.marginBottom = '16px';
+          resultDiv.appendChild(card);
+        });
+      } else {
+        resultDiv.classList.remove('hidden');
+        resultDiv.innerHTML = '<div style="background: #fee2e2; padding: 20px; border-radius: 8px; text-align: center; color: #991b1b; font-size: 16px;">❌ ไม่พบรายการที่มีชื่อบิล: ' + searchBillName + '</div>';
+      }
+    }
+
+    document.getElementById('search-btn').addEventListener('click', searchByBillId);
+
+    document.getElementById('search-bill-id').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        searchByBillId();
+      }
+    });
+
+    document.getElementById('search-bill-name-btn').addEventListener('click', searchByBillName);
+
+    document.getElementById('search-bill-name').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        searchByBillName();
+      }
+    });
+
+    async function init() {
+      document.getElementById('bill-id-auto').value = generateBillId();
+
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      document.getElementById('export-month').value = `${year}-${month}`;
+
+      if (window.elementSdk) {
+        await window.elementSdk.init({
+          defaultConfig,
+          onConfigChange,
+          mapToCapabilities: (config) => ({
+            recolorables: [],
+            borderables: [],
+            fontEditable: undefined,
+            fontSizeable: undefined
+          }),
+          mapToEditPanelValues: (config) => new Map([
+            ['app_title', config.app_title || defaultConfig.app_title],
+            ['employee_tab_name', config.employee_tab_name || defaultConfig.employee_tab_name],
+            ['employer_tab_name', config.employer_tab_name || defaultConfig.employer_tab_name]
+          ])
+        });
+      }
+
+      sdkInitialized = true;
+      showToast('⏳ กำลังโหลดข้อมูลจาก Google Sheets...', 'loading');
+      const loadResult = await loadAllRecords();
+      if (loadResult.isOk) {
+        showToast('✅ โหลดข้อมูลสำเร็จ', 'success');
+      } else {
+        showToast('❌ โหลดข้อมูลไม่สำเร็จ', 'error');
+      }
+    }
+
+    init();
+  </script>
+  <script>(function () { function c() { var b = a.contentDocument || a.contentWindow.document; if (b) { var d = b.createElement('script'); d.innerHTML = "window.__CF$cv$params={r:'9c787d407110d334',t:'MTc3MDAyMjczMy4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);"; b.getElementsByTagName('head')[0].appendChild(d) } } if (document.body) { var a = document.createElement('iframe'); a.height = 1; a.width = 1; a.style.position = 'absolute'; a.style.top = 0; a.style.left = 0; a.style.border = 'none'; a.style.visibility = 'hidden'; document.body.appendChild(a); if ('loading' !== document.readyState) c(); else if (window.addEventListener) document.addEventListener('DOMContentLoaded', c); else { var e = document.onreadystatechange || function () { }; document.onreadystatechange = function (b) { e(b); 'loading' !== document.readyState && (document.onreadystatechange = e, c()) } } } })();</script>
+</body>
+
+</html>
